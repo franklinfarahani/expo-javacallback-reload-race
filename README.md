@@ -57,6 +57,12 @@ Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0xefefefefefefeff7 i
   ...  expo.modules.raceprobe.RaceProbeModule$definition$1$1$1.run
 ```
 
+### x86_64
+
+`.github/workflows/repro.yml` runs `./scripts/repro.sh 3` and `./scripts/repro.sh --with-fix 2` on an API 35 x86_64 emulator in GitHub Actions and uploads the logcat files. In [run 45259072730](https://github.com/franklinfarahani/expo-javacallback-reload-race/actions/runs/45259072730), all 3 stock runs crashed in `invokeWithResolver` (at reloads 2, 3 and 10) and both patched runs completed 200 reloads.
+
+On x86_64 the fill pattern is not a valid address, so the kernel reports `SIGSEGV, code 128 (SI_KERNEL), fault addr 0x0`. The register dump shows the freed pointer: `rdi efefefefefefefef`, the `this` argument of `__shared_weak_count::lock()`.
+
 ## Applying the fix
 
 `./scripts/repro.sh --with-fix` does this for you. By hand, add the patch to `pnpm-workspace.yaml`.
