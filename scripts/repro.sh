@@ -17,7 +17,7 @@ fi
 ABI=$(adb shell getprop ro.product.cpu.abi | tr -d '\r')
 echo "Device ABI: $ABI; fix applied: $([ "$WITH_FIX" = 1 ] && echo yes || echo no)"
 
-pnpm install
+pnpm install --no-frozen-lockfile
 CI=1 pnpm exec expo prebuild -p android
 (cd android && ./gradlew assembleRelease -PreactNativeArchitectures="$ABI")
 adb install -r android/app/build/outputs/apk/release/app-release.apk

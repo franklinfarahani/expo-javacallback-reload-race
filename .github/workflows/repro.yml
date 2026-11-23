@@ -1,0 +1,70 @@
+name: Repro on an x86_64 emulator
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+
+jobs:
+  repro:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: stock expo-modules-core 58.1.0
+            args: '3'
+            expect: 'REPRODUCED:'
+          - name: with the fix
+            args: '--with-fix 2'
+            expect: 'NOT REPRODUCED:'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.6.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run the repro on an API 35 x86_64 emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          LOG_DIR: ${{ github.workspace }}/logcat
+          RUN_TIMEOUT: 2400
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: ./scripts/repro.sh ${{ matrix.args }} 2>&1 | tee repro.log
+
+      - name: Check the verdict
+        run: |
+          tail -1 repro.log
+          tail -1 repro.log | grep -q '^${{ matrix.expect }}'
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: logcat-${{ strategy.job-index }}
+          path: |
+            repro.log
+            logcat/

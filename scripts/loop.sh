@@ -1,9 +1,12 @@
 #!/bin/bash
 # Usage: ./scripts/loop.sh [runs] (set ANDROID_SERIAL when more than one device is connected)
+# LOG_DIR keeps the logcat files somewhere other than a temporary directory; RUN_TIMEOUT caps each run in seconds.
 set -u
 PKG=com.example.javacallbackreloadrace
 RUNS=${1:-10}
-OUT=$(mktemp -d)
+OUT=${LOG_DIR:-$(mktemp -d)}
+mkdir -p "$OUT"
+RUN_TIMEOUT=${RUN_TIMEOUT:-900}
 for run in $(seq 1 "$RUNS"); do
   log=$OUT/run-$run.log
   adb shell am force-stop $PKG
@@ -14,7 +17,7 @@ for run in $(seq 1 "$RUNS"); do
   adb logcat -v time RaceProbe:I DEBUG:F libc:F '*:S' > "$log" &
   logcat=$!
   adb shell monkey -p $PKG -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
-  for _ in $(seq 1 450); do grep -q -E 'Fatal signal|reload 201' "$log" && break; sleep 2; done
+  for _ in $(seq 1 $((RUN_TIMEOUT / 2))); do grep -q -E 'Fatal signal|reload 201' "$log" && break; sleep 2; done
   grep -q 'Fatal signal' "$log" && sleep 8
   kill $logcat 2>/dev/null; wait $logcat 2>/dev/null
   reloads=$(grep -c 'I/RaceProbe' "$log")
