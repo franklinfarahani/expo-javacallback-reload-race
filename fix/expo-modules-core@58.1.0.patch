@@ -1,0 +1,25 @@
+diff --git a/android/src/main/java/expo/modules/kotlin/jni/JavaCallback.kt b/android/src/main/java/expo/modules/kotlin/jni/JavaCallback.kt
+index 83fef2af774d8617c0042e9b6bfa4f04b77c8b13..5b839b85a6d0badc22dd82c302e212320b98acf3 100644
+--- a/android/src/main/java/expo/modules/kotlin/jni/JavaCallback.kt
++++ b/android/src/main/java/expo/modules/kotlin/jni/JavaCallback.kt
+@@ -102,16 +102,13 @@ class JavaCallback @DoNotStrip internal constructor(@DoNotStrip private val mHyb
+   private external fun invokeDoubleArray(result: DoubleArray)
+ 
+   private inline fun checkIfValid(body: () -> Unit) {
+-    try {
+-      body()
+-    } catch (e: Throwable) {
++    // resetNative() takes this lock before freeing the native callback.
++    synchronized(mHybridData) {
+       if (!mHybridData.isValid) {
+-        // We know that this particular JavaCallback was invalidated, so it shouldn't be invoked.
+-        // To prevent crashes, we decided to suppress the error here.
+-        logger.error("Invalidated JavaCallback was invoked", e)
++        logger.warn("Invalidated JavaCallback was invoked")
+         return
+       }
+-      throw e
++      body()
+     }
+   }
+ 
