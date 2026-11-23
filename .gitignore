@@ -43,3 +43,6 @@ yarn-error.*
 # local module build output
 modules/*/android/build/
 modules/*/android/.cxx/
+
+# written by scripts/repro.sh --with-fix
+pnpm-workspace.yaml

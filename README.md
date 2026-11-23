@@ -6,17 +6,33 @@ The release build is debuggable so Android can run the bundled `wrap.sh`. It ena
 
 ## Run
 
-Use an arm64 Android emulator, Node 24 and pnpm.
+Use an Android emulator (arm64 or x86_64), Node 24 and pnpm. One command builds the release app for the emulator's ABI, installs it and runs the reload loop:
+
+```sh
+./scripts/repro.sh          # stock expo-modules-core 58.1.0
+./scripts/repro.sh --with-fix   # with fix/expo-modules-core@58.1.0.patch applied
+```
+
+It ends with one line:
+
+```
+REPRODUCED: 3 of 5 runs crashed in expo::JavaCallback::invokeWithResolver
+NOT REPRODUCED: all 5 runs completed 200 reloads without a crash
+```
+
+Pass a run count as the last argument (default 5). Set `ANDROID_SERIAL` if more than one device is connected. `--with-fix` writes `pnpm-workspace.yaml` to apply the patch, and a run without it removes that file.
+
+To run the steps by hand:
 
 ```sh
 pnpm install
 pnpm exec expo prebuild -p android
-cd android && ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a && cd ..
+cd android && ./gradlew assembleRelease -PreactNativeArchitectures=$(adb shell getprop ro.product.cpu.abi) && cd ..
 adb install -r android/app/build/outputs/apk/release/app-release.apk
 ./scripts/loop.sh 10
 ```
 
-Each run clears the app’s data. The script reports the reload count and prints the directory containing the logcat files. Set `ANDROID_SERIAL` if more than one device is connected.
+Each run clears the app’s data. `loop.sh` reports the reload count of each run and prints the directory containing the logcat files.
 
 ## Results
 
@@ -43,7 +59,7 @@ Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0xefefefefefefeff7 i
 
 ## Applying the fix
 
-Add the patch to `pnpm-workspace.yaml`.
+`./scripts/repro.sh --with-fix` does this for you. By hand, add the patch to `pnpm-workspace.yaml`.
 
 ```yaml
 patchedDependencies:

@@ -25,9 +25,11 @@ module.exports = function withMallocDebug(config) {
   return withDangerousMod(config, [
     'android',
     (c) => {
-      const dir = path.join(c.modRequest.platformProjectRoot, 'app/src/main/resources/lib/arm64-v8a');
-      fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(path.join(dir, 'wrap.sh'), WRAP_SH, { mode: 0o755 });
+      for (const abi of ['arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64']) {
+        const dir = path.join(c.modRequest.platformProjectRoot, 'app/src/main/resources/lib', abi);
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, 'wrap.sh'), WRAP_SH, { mode: 0o755 });
+      }
       return c;
     },
   ]);
